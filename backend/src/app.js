@@ -6,6 +6,12 @@ import { env } from './config/env.js';
 import healthRoutes from './modules/health/health.routes.js';
 import authRoutes from './modules/auth/auth.routes.js';
 import usersRoutes from './modules/users/users.routes.js';
+import profilesRoutes from './modules/profiles/profile.routes.js';
+import destinationsRoutes from './modules/destinations/destination.routes.js';
+import placesRoutes from './modules/places/place.routes.js';
+import tripsRoutes from './modules/trips/trip.routes.js';
+import itinerariesRoutes from './modules/itineraries/itinerary.routes.js';
+import activitiesRoutes from './modules/activities/activity.routes.js';
 import { swaggerDocsRouter, swaggerUiHandler } from './docs/swagger.js';
 import { notFoundHandler, globalErrorHandler } from './middleware/error.middleware.js';
 
@@ -32,10 +38,15 @@ app.use('/api/docs', swaggerDocsRouter, swaggerUiHandler);
 app.use('/api/v1/health', healthRoutes);
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/users', usersRoutes);
+app.use('/api/v1/profiles', profilesRoutes);
+app.use('/api/v1/destinations', destinationsRoutes);
+app.use('/api/v1/places', placesRoutes);
+app.use('/api/v1/trips', tripsRoutes);
+app.use('/api/v1/itineraries', itinerariesRoutes);
+app.use('/api/v1/activities', activitiesRoutes);
 
 // Error Handling Middlewares
 app.use(notFoundHandler);
 app.use(globalErrorHandler);
 
 export default app;
-

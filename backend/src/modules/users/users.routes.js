@@ -1,12 +1,10 @@
 import { Router } from 'express';
-import { ApiResponse } from '../../utils/api-response.js';
+import { UserController } from './users.controller.js';
 
 const router = Router();
 
-// Foundational route placeholder - User management endpoints will be implemented in subsequent milestones
-router.get('/status', (req, res) => {
-  ApiResponse.success(res, { module: 'users', initialized: true }, 'Users module initialized');
-});
+router.get('/status', UserController.getStatus);
+router.get('/:id', UserController.getById);
+router.put('/:id', UserController.update);
 
 export default router;
-
