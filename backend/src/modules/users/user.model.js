@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
 
 const userSchema = new mongoose.Schema(
   {
@@ -71,5 +72,22 @@ const userSchema = new mongoose.Schema(
 // Compound index for administrative filtering
 userSchema.index({ role: 1, status: 1 });
 
-export const User = mongoose.model('User', userSchema);
+// Pre-save hook: Hash password before saving if modified
+userSchema.pre('save', async function (next) {
+  if (!this.isModified('password')) return next();
+  try {
+    const salt = await bcrypt.genSalt(12);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
 
+// Instance method: Securely compare password candidate
+userSchema.methods.comparePassword = async function (candidatePassword) {
+  if (!this.password) return false;
+  return await bcrypt.compare(candidatePassword, this.password);
+};
+
+export const User = mongoose.model('User', userSchema);

@@ -23,6 +23,120 @@ export const swaggerSpec = {
         }
       }
     },
+    '/auth/register': {
+      post: {
+        summary: 'Register New User',
+        tags: ['Authentication'],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['name', 'email', 'password'],
+                properties: {
+                  name: { type: 'string', example: 'Aarav Sharma' },
+                  email: { type: 'string', format: 'email', example: 'aarav@example.com' },
+                  password: { type: 'string', format: 'password', example: 'Pass@word123' }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          201: { description: 'Account registered successfully' },
+          409: { description: 'Email already exists' },
+          422: { description: 'Validation error' }
+        }
+      }
+    },
+    '/auth/login': {
+      post: {
+        summary: 'User Login',
+        tags: ['Authentication'],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['email', 'password'],
+                properties: {
+                  email: { type: 'string', format: 'email', example: 'aarav@example.com' },
+                  password: { type: 'string', format: 'password', example: 'Pass@word123' }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          200: { description: 'Logged in successfully' },
+          401: { description: 'Invalid credentials' }
+        }
+      }
+    },
+    '/auth/refresh': {
+      post: {
+        summary: 'Rotate Refresh Token & Issue Access Token',
+        tags: ['Authentication'],
+        responses: {
+          200: { description: 'Token refreshed successfully' },
+          401: { description: 'Invalid or expired refresh token' }
+        }
+      }
+    },
+    '/auth/logout': {
+      post: {
+        summary: 'User Logout (Revokes Session)',
+        tags: ['Authentication'],
+        responses: {
+          200: { description: 'Logged out successfully' }
+        }
+      }
+    },
+    '/auth/me': {
+      get: {
+        summary: 'Get Current Authenticated User & Profile',
+        tags: ['Authentication'],
+        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        responses: {
+          200: { description: 'Current user retrieved successfully' },
+          401: { description: 'Unauthorized' }
+        }
+      }
+    },
+    '/users/me': {
+      get: {
+        summary: 'Get Current User Account Details',
+        tags: ['Users'],
+        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        responses: {
+          200: { description: 'Current user retrieved successfully' },
+          401: { description: 'Unauthorized' }
+        }
+      },
+      patch: {
+        summary: 'Update Current User Account Details',
+        tags: ['Users'],
+        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        requestBody: {
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string', example: 'Aarav Sharma Updated' }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          200: { description: 'User updated successfully' },
+          401: { description: 'Unauthorized' }
+        }
+      }
+    },
     '/profiles/{userId}': {
       get: {
         summary: 'Get Traveller Profile',
