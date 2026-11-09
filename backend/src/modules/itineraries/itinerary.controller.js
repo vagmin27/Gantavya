@@ -18,7 +18,8 @@ export class ItineraryController {
         return ApiResponse.error(res, 'Trip ID query parameter is required', 400);
       }
 
-      const days = await ItineraryService.listDaysForTrip(tripId);
+      const userId = req.user?.id || null;
+      const days = await ItineraryService.listDaysForTrip(tripId, userId);
       return ApiResponse.success(res, days, 'Itinerary days retrieved successfully');
     } catch (error) {
       if (error.statusCode) {
@@ -30,7 +31,8 @@ export class ItineraryController {
 
   static async getDayById(req, res, next) {
     try {
-      const day = await ItineraryService.getDayById(req.params.id);
+      const userId = req.user?.id || null;
+      const day = await ItineraryService.getDayById(req.params.id, userId);
       return ApiResponse.success(res, day, 'Itinerary day retrieved successfully');
     } catch (error) {
       if (error.statusCode) {

@@ -171,7 +171,7 @@ export default function TripWorkspace({ tripId, onBack }) {
 
   const handleToggleActivityStatus = async (activity) => {
     if (!canEdit) return;
-    const nextStatus = activity.status === 'completed' ? 'pending' : 'completed';
+    const nextStatus = activity.status === 'completed' ? 'planned' : 'completed';
     try {
       const res = await TripService.updateActivity(activity._id, { status: nextStatus });
       setActivities(activities.map((a) => (a._id === activity._id ? res.data : a)));
@@ -194,14 +194,25 @@ export default function TripWorkspace({ tripId, onBack }) {
     e.preventDefault();
     if (!canEdit || !selectedDayId) return;
     try {
+      let durationMinutes = 60;
+      if (newActivity.startTime && newActivity.endTime) {
+        const [sh, sm] = newActivity.startTime.split(':').map(Number);
+        const [eh, em] = newActivity.endTime.split(':').map(Number);
+        const diff = (eh * 60 + em) - (sh * 60 + sm);
+        durationMinutes = diff > 0 ? diff : 60;
+      }
+
       const payload = {
         itineraryDayId: selectedDayId,
+        tripId,
         title: newActivity.title.trim(),
         startTime: newActivity.startTime,
         endTime: newActivity.endTime,
+        durationMinutes,
+        sequence: activities.length + 1,
         type: newActivity.type,
-        cost: Number(newActivity.estimatedCost) || 0,
-        notes: newActivity.notes.trim() || undefined
+        estimatedCost: Number(newActivity.estimatedCost) || 0,
+        description: newActivity.notes.trim() || undefined
       };
       const res = await TripService.createActivity(payload);
       setActivities([...activities, res.data]);
@@ -529,16 +540,16 @@ export default function TripWorkspace({ tripId, onBack }) {
                               <Clock className="w-3.5 h-3.5 text-slate-500" />
                               {act.startTime} &ndash; {act.endTime}
                             </span>
-                            {act.cost > 0 && (
+                            {(act.estimatedCost > 0 || act.cost > 0) && (
                               <span className="flex items-center gap-0.5 text-amber-400/90 font-mono">
-                                {trip.budget?.currency} {act.cost}
+                                {trip.budget?.currency} {act.estimatedCost || act.cost}
                               </span>
                             )}
                           </div>
 
-                          {act.notes && (
+                          {(act.description || act.notes) && (
                             <p className="text-xs text-slate-400/80 mt-1.5 italic bg-slate-900/60 px-2.5 py-1 rounded-lg">
-                              &ldquo;{act.notes}&rdquo;
+                              &ldquo;{act.description || act.notes}&rdquo;
                             </p>
                           )}
                         </div>

@@ -53,7 +53,8 @@ def test_post_planning_contract_success():
         ]
     }
 
-    response = client.post("/api/v1/planning/plan", json=payload)
+    headers = {"X-Internal-Service-Key": "dev_internal_service_key_for_backend_intelligence_comm"}
+    response = client.post("/api/v1/planning/plan", json=payload, headers=headers)
     assert response.status_code == 200
     data = response.json()
     assert data["trip_id"] == "test_trip_123"
@@ -63,7 +64,28 @@ def test_post_planning_contract_success():
     assert data["itinerary_days"][0]["activities"][0]["title"] == "Visit Phewa Lake"
 
 
+def test_post_planning_rejects_missing_or_invalid_internal_key():
+    payload = {
+        "trip_id": "test_trip_unauthorized",
+        "destination": {"name": "Pokhara", "country": "Nepal"},
+        "start_date": "2026-10-01",
+        "end_date": "2026-10-03"
+    }
+    # Missing header
+    res_missing = client.post("/api/v1/planning/plan", json=payload)
+    assert res_missing.status_code == 403
+
+    # Invalid header
+    res_invalid = client.post(
+        "/api/v1/planning/plan",
+        json=payload,
+        headers={"X-Internal-Service-Key": "wrong_key"}
+    )
+    assert res_invalid.status_code == 403
+
+
 def test_post_planning_invalid_dates():
+    headers = {"X-Internal-Service-Key": "dev_internal_service_key_for_backend_intelligence_comm"}
     payload = {
         "trip_id": "test_trip_invalid",
         "destination": {"name": "Kathmandu", "country": "Nepal"},
@@ -71,6 +93,6 @@ def test_post_planning_invalid_dates():
         "end_date": "2026-10-01",  # end before start
         "budget": 10000.0
     }
-    response = client.post("/api/v1/planning/plan", json=payload)
+    response = client.post("/api/v1/planning/plan", json=payload, headers=headers)
     assert response.status_code == 422
 

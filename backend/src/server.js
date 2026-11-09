@@ -1,4 +1,5 @@
 import app from './app.js';
+import mongoose from 'mongoose';
 import { env } from './config/env.js';
 import { connectDB } from './config/db.js';
 
@@ -13,8 +14,14 @@ async function bootstrap() {
 
   const shutdown = async (signal) => {
     console.log(`[Backend] Received ${signal}. Shutting down gracefully...`);
-    server.close(() => {
+    server.close(async () => {
       console.log('[Backend] HTTP server closed.');
+      try {
+        await mongoose.connection.close(false);
+        console.log('[Backend] MongoDB connection closed cleanly.');
+      } catch (closeErr) {
+        console.error('[Backend] Error during database disconnect:', closeErr.message);
+      }
       process.exit(0);
     });
   };

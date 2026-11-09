@@ -18,7 +18,8 @@ export class ActivityController {
         return ApiResponse.error(res, 'Itinerary Day ID query parameter is required', 400);
       }
 
-      const activities = await ActivityService.listActivitiesForDay(itineraryDayId);
+      const userId = req.user?.id || null;
+      const activities = await ActivityService.listActivitiesForDay(itineraryDayId, userId);
       return ApiResponse.success(res, activities, 'Activities retrieved successfully');
     } catch (error) {
       if (error.statusCode) {
@@ -30,7 +31,8 @@ export class ActivityController {
 
   static async getById(req, res, next) {
     try {
-      const activity = await ActivityService.getActivityById(req.params.id);
+      const userId = req.user?.id || null;
+      const activity = await ActivityService.getActivityById(req.params.id, userId);
       return ApiResponse.success(res, activity, 'Activity retrieved successfully');
     } catch (error) {
       if (error.statusCode) {

@@ -1,5 +1,7 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Header, Depends
 from datetime import timedelta
+from typing import Optional
+from app.core.config import settings
 from app.schemas.planning import (
     PlanningInputSchema,
     PlanningOutputSchema,
@@ -8,6 +10,20 @@ from app.schemas.planning import (
 )
 
 router = APIRouter()
+
+
+def verify_internal_service_key(
+    x_internal_service_key: Optional[str] = Header(None, alias="X-Internal-Service-Key")
+):
+    """
+    Validates East-West service communication between Express backend and FastAPI.
+    """
+    if settings.INTERNAL_SERVICE_KEY:
+        if not x_internal_service_key or x_internal_service_key != settings.INTERNAL_SERVICE_KEY:
+            raise HTTPException(
+                status_code=403,
+                detail="Forbidden: Invalid or missing internal service key"
+            )
 
 
 @router.get("/contract", summary="Retrieve Planning Contract Specification")
@@ -26,7 +42,12 @@ def get_planning_contract():
     }
 
 
-@router.post("/plan", response_model=PlanningOutputSchema, summary="Plan Trip Itinerary Contract")
+@router.post(
+    "/plan",
+    response_model=PlanningOutputSchema,
+    dependencies=[Depends(verify_internal_service_key)],
+    summary="Plan Trip Itinerary Contract"
+)
 def plan_itinerary(payload: PlanningInputSchema):
     """
     Receives structured constraints and places from Express backend.

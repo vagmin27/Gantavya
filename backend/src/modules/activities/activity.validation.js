@@ -7,20 +7,24 @@ export function validateActivityInput(data) {
     errors.push('Itinerary Day ID reference is required');
   }
 
-  if (!data.tripId) {
-    errors.push('Trip ID reference is required');
-  }
-
   if (!data.title || typeof data.title !== 'string' || data.title.trim().length < 2) {
     errors.push('Activity title is required (min 2 characters)');
   }
 
-  if (data.durationMinutes === undefined || typeof data.durationMinutes !== 'number' || data.durationMinutes < 5) {
+  if (data.durationMinutes !== undefined && (typeof data.durationMinutes !== 'number' || data.durationMinutes < 5)) {
     errors.push('Valid duration in minutes (>= 5) is required');
   }
 
-  if (data.sequence === undefined || typeof data.sequence !== 'number' || data.sequence < 1) {
+  if (data.sequence !== undefined && (typeof data.sequence !== 'number' || data.sequence < 1)) {
     errors.push('Sequence order number (>= 1) is required');
+  }
+
+  if (data.startTime && !/^([01]\d|2[0-3]):([0-5]\d)$/.test(data.startTime)) {
+    errors.push('Start time must be HH:MM format (24h)');
+  }
+
+  if (data.endTime && !/^([01]\d|2[0-3]):([0-5]\d)$/.test(data.endTime)) {
+    errors.push('End time must be HH:MM format (24h)');
   }
 
   if (data.status && !ACTIVITY_STATUS_ENUM.includes(data.status)) {

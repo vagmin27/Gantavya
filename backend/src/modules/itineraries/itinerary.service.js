@@ -1,5 +1,6 @@
 import { ItineraryDay } from './itinerary-day.model.js';
 import { Trip } from '../trips/trip.model.js';
+import { TripService } from '../trips/trip.service.js';
 import { Activity } from '../activities/activity.model.js';
 
 export class ItineraryService {
@@ -14,33 +15,39 @@ export class ItineraryService {
       throw error;
     }
 
-    if (userId) {
-      const isOwner = trip.ownerId.toString() === userId.toString();
-      const participant = trip.participants.find(
-        (p) => p.userId.toString() === userId.toString() && p.membershipStatus === 'active'
-      );
-      const canEdit = isOwner || (participant && ['owner', 'organizer', 'editor'].includes(participant.role));
-      if (!canEdit) {
-        const error = new Error('Forbidden: You do not have permission to modify this trip itinerary');
-        error.statusCode = 403;
-        throw error;
-      }
+    if (!userId) {
+      const error = new Error('Unauthorized: Authentication required to modify trip itinerary');
+      error.statusCode = 401;
+      throw error;
+    }
+
+    const isOwner = trip.ownerId.toString() === userId.toString();
+    const participant = trip.participants.find(
+      (p) => p.userId.toString() === userId.toString() && p.membershipStatus === 'active'
+    );
+    const canEdit = isOwner || (participant && ['owner', 'organizer', 'editor'].includes(participant.role));
+    if (!canEdit) {
+      const error = new Error('Forbidden: You do not have permission to modify this trip itinerary');
+      error.statusCode = 403;
+      throw error;
     }
 
     return trip;
   }
 
-  static async listDaysForTrip(tripId) {
+  static async listDaysForTrip(tripId, userId = null) {
+    await TripService.getTripById(tripId, userId);
     return await ItineraryDay.find({ tripId }).sort({ dayNumber: 1 });
   }
 
-  static async getDayById(id) {
+  static async getDayById(id, userId = null) {
     const day = await ItineraryDay.findById(id);
     if (!day) {
       const error = new Error('Itinerary day not found');
       error.statusCode = 404;
       throw error;
     }
+    await TripService.getTripById(day.tripId, userId);
     return day;
   }
 
