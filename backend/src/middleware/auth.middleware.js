@@ -49,6 +49,36 @@ export async function authenticate(req, res, next) {
 }
 
 /**
+ * Optional authentication middleware.
+ * Attaches user if token is valid, but allows unauthenticated requests to proceed.
+ */
+export async function optionalAuthenticate(req, res, next) {
+  const token =
+    req.cookies?.accessToken ||
+    req.cookies?.token ||
+    req.headers.authorization?.replace('Bearer ', '');
+
+  if (!token) {
+    return next();
+  }
+
+  try {
+    const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET);
+    const user = await User.findById(decoded.id);
+    if (user && user.status === 'active') {
+      req.user = {
+        id: user._id.toString(),
+        email: user.email,
+        role: user.role
+      };
+    }
+  } catch {
+    // Ignore invalid/expired token in optional auth
+  }
+  next();
+}
+
+/**
  * Standard CSRF mitigation helper for cookie-based state-changing requests.
  * Safe methods (GET, HEAD, OPTIONS) do not require CSRF headers.
  */

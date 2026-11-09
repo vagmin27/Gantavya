@@ -316,6 +316,108 @@ export const swaggerSpec = {
         }
       }
     },
+    '/trips/{id}/invitations': {
+      post: {
+        summary: 'Invite Participant to Trip by Email',
+        tags: ['Trips'],
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string' } }
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['email'],
+                properties: {
+                  email: { type: 'string', format: 'email', example: 'friend@example.com' },
+                  role: { type: 'string', enum: ['editor', 'viewer'], default: 'viewer' }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          201: { description: 'Invitation created' },
+          400: { description: 'User already participant' },
+          409: { description: 'Pending invitation already exists' }
+        }
+      }
+    },
+    '/trips/invitations/accept': {
+      post: {
+        summary: 'Accept Trip Invitation via Token',
+        tags: ['Trips'],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['token'],
+                properties: {
+                  token: { type: 'string' }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          200: { description: 'Invitation accepted' },
+          404: { description: 'Invitation not found' },
+          410: { description: 'Invitation expired' }
+        }
+      }
+    },
+    '/trips/invitations/decline': {
+      post: {
+        summary: 'Decline Trip Invitation via Token',
+        tags: ['Trips'],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['token'],
+                properties: {
+                  token: { type: 'string' }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          200: { description: 'Invitation declined' }
+        }
+      }
+    },
+    '/trips/{id}/generate-itinerary': {
+      post: {
+        summary: 'Generate Automated Itinerary via FastAPI Intelligence Engine',
+        tags: ['Trips'],
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string' } }
+        ],
+        requestBody: {
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  confirmOverwrite: { type: 'boolean', default: false }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          200: { description: 'Itinerary generated and saved' },
+          409: { description: 'Itinerary already exists (requires confirmOverwrite: true)' }
+        }
+      }
+    },
     '/trips/{id}/participants': {
       post: {
         summary: 'Add Participant to Trip',
@@ -343,6 +445,39 @@ export const swaggerSpec = {
           200: { description: 'Participant added successfully' },
           400: { description: 'Duplicate participant or invalid operation' },
           422: { description: 'Validation error' }
+        }
+      }
+    },
+    '/itineraries/reorder': {
+      post: {
+        summary: 'Reorder Itinerary Days',
+        tags: ['Itineraries'],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['tripId', 'dayOrders'],
+                properties: {
+                  tripId: { type: 'string' },
+                  dayOrders: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        dayId: { type: 'string' },
+                        newDayNumber: { type: 'integer' }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          200: { description: 'Itinerary days reordered' }
         }
       }
     },
@@ -381,6 +516,39 @@ export const swaggerSpec = {
           201: { description: 'Itinerary day created successfully' },
           409: { description: 'Day number already exists for this trip' },
           422: { description: 'Validation error' }
+        }
+      }
+    },
+    '/activities/reorder': {
+      post: {
+        summary: 'Reorder Activities in Itinerary Day',
+        tags: ['Activities'],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['itineraryDayId', 'activityOrders'],
+                properties: {
+                  itineraryDayId: { type: 'string' },
+                  activityOrders: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        activityId: { type: 'string' },
+                        newSequence: { type: 'integer' }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          200: { description: 'Activities reordered' }
         }
       }
     },

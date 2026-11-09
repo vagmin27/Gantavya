@@ -23,7 +23,7 @@ const activitySchema = new mongoose.Schema(
     placeId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Place',
-      required: [true, 'Place ID reference is required']
+      default: null
     },
     title: {
       type: String,

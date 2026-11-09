@@ -11,10 +11,6 @@ export function validateActivityInput(data) {
     errors.push('Trip ID reference is required');
   }
 
-  if (!data.placeId) {
-    errors.push('Place ID reference is required');
-  }
-
   if (!data.title || typeof data.title !== 'string' || data.title.trim().length < 2) {
     errors.push('Activity title is required (min 2 characters)');
   }

@@ -60,6 +60,47 @@ const participantSchema = new mongoose.Schema(
   { _id: true }
 );
 
+const invitationSchema = new mongoose.Schema(
+  {
+    email: {
+      type: String,
+      required: [true, 'Invitee email is required'],
+      lowercase: true,
+      trim: true
+    },
+    role: {
+      type: String,
+      enum: {
+        values: ['editor', 'viewer'],
+        message: '{VALUE} is not a valid invitation role'
+      },
+      default: 'viewer'
+    },
+    token: {
+      type: String,
+      required: [true, 'Invitation token is required']
+    },
+    invitedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: [true, 'InvitedBy user reference is required']
+    },
+    status: {
+      type: String,
+      enum: {
+        values: ['pending', 'accepted', 'declined', 'cancelled'],
+        message: '{VALUE} is not a valid invitation status'
+      },
+      default: 'pending'
+    },
+    expiresAt: {
+      type: Date,
+      required: [true, 'Expiration date is required']
+    }
+  },
+  { timestamps: true }
+);
+
 const travelConstraintsSchema = new mongoose.Schema(
   {
     maxBudget: {
@@ -189,6 +230,10 @@ const tripSchema = new mongoose.Schema(
         message: 'Duplicate participants are not allowed in the same trip'
       }
     },
+    invitations: {
+      type: [invitationSchema],
+      default: []
+    },
     status: {
       type: String,
       enum: {
@@ -214,8 +259,8 @@ const tripSchema = new mongoose.Schema(
 // Indexes
 tripSchema.index({ ownerId: 1, status: 1 });
 tripSchema.index({ 'participants.userId': 1, status: 1 });
+tripSchema.index({ 'invitations.token': 1 });
 tripSchema.index({ destinationId: 1 });
 tripSchema.index({ startDate: 1, endDate: 1 });
 
 export const Trip = mongoose.model('Trip', tripSchema);
-
