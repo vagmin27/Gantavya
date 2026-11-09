@@ -40,6 +40,13 @@ describe('Modular Monolith Module Routes & API Contracts', () => {
     expect(res.body.data).toHaveProperty('module', 'activities');
   });
 
+  it('GET /api/v1/transportation/status should return 200', async () => {
+    const res = await request(app).get('/api/v1/transportation/status');
+    expect(res.status).toBe(200);
+    expect(res.body.data).toHaveProperty('module', 'transportation');
+    expect(res.body.data).toHaveProperty('initialized', true);
+  });
+
   it('POST /api/v1/trips should return 422 on validation failure', async () => {
     const res = await request(app)
       .post('/api/v1/trips')

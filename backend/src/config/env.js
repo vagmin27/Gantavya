@@ -27,5 +27,12 @@ export const env = {
   INTELLIGENCE_SERVICE_URL: process.env.INTELLIGENCE_SERVICE_URL || 'http://localhost:8000/api/v1',
   INTERNAL_SERVICE_KEY: process.env.INTERNAL_SERVICE_KEY || 'dev_internal_service_key',
 
+  // Transportation Providers
+  HERE_API_KEY: process.env.HERE_API_KEY || '',
+  HERE_ROUTING_BASE_URL: process.env.HERE_ROUTING_BASE_URL || 'https://router.hereapi.com/v8',
+  AMADEUS_CLIENT_ID: process.env.AMADEUS_CLIENT_ID || '',
+  AMADEUS_CLIENT_SECRET: process.env.AMADEUS_CLIENT_SECRET || '',
+  AMADEUS_HOSTNAME: process.env.AMADEUS_HOSTNAME || 'test.api.amadeus.com',
+
   isProduction: process.env.NODE_ENV === 'production'
 };

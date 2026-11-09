@@ -594,6 +594,15 @@ export const swaggerSpec = {
           422: { description: 'Validation error' }
         }
       }
+    },
+    '/transportation/status': {
+      get: {
+        summary: 'Transportation Module Status',
+        tags: ['Transportation'],
+        responses: {
+          200: { description: 'Transportation domain module initialized' }
+        }
+      }
     }
   }
 };

@@ -12,6 +12,7 @@ import placesRoutes from './modules/places/place.routes.js';
 import tripsRoutes from './modules/trips/trip.routes.js';
 import itinerariesRoutes from './modules/itineraries/itinerary.routes.js';
 import activitiesRoutes from './modules/activities/activity.routes.js';
+import transportationRoutes from './modules/transportation/transportation.routes.js';
 import { swaggerDocsRouter, swaggerUiHandler } from './docs/swagger.js';
 import { notFoundHandler, globalErrorHandler } from './middleware/error.middleware.js';
 
@@ -44,6 +45,7 @@ app.use('/api/v1/places', placesRoutes);
 app.use('/api/v1/trips', tripsRoutes);
 app.use('/api/v1/itineraries', itinerariesRoutes);
 app.use('/api/v1/activities', activitiesRoutes);
+app.use('/api/v1/transportation', transportationRoutes);
 
 // Error Handling Middlewares
 app.use(notFoundHandler);
