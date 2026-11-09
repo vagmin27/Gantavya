@@ -1,7 +1,7 @@
-from fastapi import APIRouter, HTTPException, Header, Depends
+from fastapi import APIRouter, HTTPException, Depends
 from datetime import timedelta
-from typing import Optional
 from app.core.config import settings
+from app.core.security import verify_internal_service_key
 from app.schemas.planning import (
     PlanningInputSchema,
     PlanningOutputSchema,
@@ -10,20 +10,6 @@ from app.schemas.planning import (
 )
 
 router = APIRouter()
-
-
-def verify_internal_service_key(
-    x_internal_service_key: Optional[str] = Header(None, alias="X-Internal-Service-Key")
-):
-    """
-    Validates East-West service communication between Express backend and FastAPI.
-    """
-    if settings.INTERNAL_SERVICE_KEY:
-        if not x_internal_service_key or x_internal_service_key != settings.INTERNAL_SERVICE_KEY:
-            raise HTTPException(
-                status_code=403,
-                detail="Forbidden: Invalid or missing internal service key"
-            )
 
 
 @router.get("/contract", summary="Retrieve Planning Contract Specification")

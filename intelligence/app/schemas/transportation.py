@@ -116,6 +116,13 @@ class TransportCoordinatesSchema(BaseModel):
     longitude: float = Field(..., ge=-180.0, le=180.0, description="Longitude in degrees (-180 to 180)")
     latitude: float = Field(..., ge=-90.0, le=90.0, description="Latitude in degrees (-90 to 90)")
 
+    @model_validator(mode="before")
+    @classmethod
+    def parse_coords(cls, data: Any) -> Any:
+        if isinstance(data, (list, tuple)) and len(data) == 2:
+            return {"longitude": float(data[0]), "latitude": float(data[1])}
+        return data
+
 
 class TransportNodeSchema(BaseModel):
     node_id: str = Field(..., min_length=1, description="Unique transport node identifier")

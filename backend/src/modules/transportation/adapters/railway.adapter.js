@@ -314,7 +314,7 @@ export class IndianRailwaysAdapter extends TransportationProviderAdapter {
         taxesAndFees,
         currency: 'INR',
         fareTier,
-        isEstimated: false
+        isEstimated: true
       },
       additionalCosts,
       transferInfo: null,
@@ -322,7 +322,7 @@ export class IndianRailwaysAdapter extends TransportationProviderAdapter {
       dataFreshness: {
         freshnessLevel: 'scheduled',
         source: 'indian_railways_gtfs_static',
-        confidenceScore: 0.95,
+        confidenceScore: 0.85,
         lastFetchedAt: new Date(),
         validUntil: new Date(Date.now() + 604800 * 1000) // 7 days cache validity for static timetables
       },
@@ -333,7 +333,7 @@ export class IndianRailwaysAdapter extends TransportationProviderAdapter {
       },
       polyline: null,
       intermediateStops,
-      notes: `Official scheduled timetable: ${train.trainName}. Bookings via IRCTC.`
+      notes: `Official scheduled timetable: ${train.trainName}. Live seat availability, dynamic surge pricing, and ticket booking must be verified directly on official IRCTC portal (https://www.irctc.co.in).`
     };
   }
 
@@ -401,22 +401,22 @@ export class IndianRailwaysAdapter extends TransportationProviderAdapter {
         },
         additionalCosts,
         transferInfo: null,
-        availabilityStatus: 'scheduled',
+        availabilityStatus: 'unknown',
         dataFreshness: {
-          freshnessLevel: 'scheduled',
-          source: 'indian_railways_gtfs_static',
-          confidenceScore: 0.88,
+          freshnessLevel: 'historical_estimate',
+          source: 'indian_railways_corridor_estimate',
+          confidenceScore: 0.50,
           lastFetchedAt: new Date(),
           validUntil: new Date(Date.now() + 604800 * 1000)
         },
         bookingInfo: {
-          isBookableOnline: true,
+          isBookableOnline: false,
           bookingReference: null,
           bookingUrl: 'https://www.irctc.co.in/nget/'
         },
         polyline: null,
         intermediateStops: [],
-        notes: 'Estimated Indian Railways intercity service based on track distance and GTFS speed profiles.'
+        notes: 'Estimated Indian Railways intercity corridor based on track topology. Verified train timetables, live seat availability, and bookings must be confirmed on IRCTC.'
       }
     ];
   }

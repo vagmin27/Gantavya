@@ -429,22 +429,22 @@ export class AmadeusFlightAdapter extends TransportationProviderAdapter {
           }
         ],
         transferInfo: null,
-        availabilityStatus: 'scheduled',
+        availabilityStatus: 'unknown',
         dataFreshness: {
           freshnessLevel: 'historical_estimate',
           source: 'amadeus_heuristic_fallback',
-          confidenceScore: 0.88,
+          confidenceScore: 0.40,
           lastFetchedAt: new Date(),
           validUntil: new Date(Date.now() + 10800 * 1000)
         },
         bookingInfo: {
-          isBookableOnline: true,
-          bookingReference: 'OFFER-EST-1',
-          bookingUrl: `https://www.goindigo.in/booking/flight-search.html?origin=${originIata}&dest=${destIata}`
+          isBookableOnline: false,
+          bookingReference: null,
+          bookingUrl: `https://www.google.com/travel/flights?q=flights+from+${originIata}+to+${destIata}`
         },
         polyline: null,
         intermediateStops: [],
-        notes: `Direct flight offer estimated based on domestic scheduled air corridor (${reason}).`
+        notes: `Live flight offers unavailable. Reference flight corridor estimate only (${reason}). Verified live pricing and real-time seat availability require active Amadeus credentials.`
       }
     ];
   }

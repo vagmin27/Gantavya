@@ -203,7 +203,7 @@ export class HereRoadAdapter extends TransportationProviderAdapter {
         },
         additionalCosts,
         transferInfo: null,
-        availabilityStatus: 'scheduled',
+        availabilityStatus: 'active',
         dataFreshness: {
           freshnessLevel: 'realtime',
           source: 'here_routing_v8',
@@ -313,11 +313,11 @@ export class HereRoadAdapter extends TransportationProviderAdapter {
         },
         additionalCosts,
         transferInfo: null,
-        availabilityStatus: 'scheduled',
+        availabilityStatus: 'unknown',
         dataFreshness: {
           freshnessLevel: 'historical_estimate',
           source: 'here_heuristic_fallback',
-          confidenceScore: 0.85,
+          confidenceScore: 0.50,
           lastFetchedAt: new Date(),
           validUntil: new Date(Date.now() + 3600 * 1000)
         },
@@ -328,7 +328,7 @@ export class HereRoadAdapter extends TransportationProviderAdapter {
         },
         polyline: null,
         intermediateStops: [],
-        notes: `Road transit estimated based on standard highway topology (${reason}).`
+        notes: `Road transit estimated based on geographic highway topology. Live traffic conditions, road incidents, and FASTag toll pricing unavailable without configured live HERE API (${reason}).`
       }
     ];
   }

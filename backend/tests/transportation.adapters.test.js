@@ -672,6 +672,8 @@ describe('Sub-Milestone 2.4.2: External Transportation Provider Adapters & Mongo
       // Fare calculation check
       expect(leg.fare.fareTier).toBe('ac_tier_2');
       expect(leg.fare.baseAmount).toBeGreaterThan(2500);
+      expect(leg.fare.isEstimated).toBe(true); // Truthful tariff estimate, not confirmed live booking
+      expect(leg.notes).toContain('IRCTC');
       expect(leg.additionalCosts.length).toBeGreaterThan(0);
 
       const validation = validateTransitLeg(leg);
@@ -856,6 +858,263 @@ describe('Sub-Milestone 2.4.2: External Transportation Provider Adapters & Mongo
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
       expect(res.body.data.acknowledged).toBe(true);
+    });
+  });
+
+  // ========================================================
+  // 8. DYNAMIC TRANSPORTATION TRUTHFULNESS & ANTI-FABRICATION
+  // ========================================================
+
+  describe('8. Dynamic Transportation Truthfulness & Anti-Fabrication Invariants', () => {
+    it('invariant: static datasets must NEVER claim freshnessLevel "realtime"', async () => {
+      const railAdapter = new IndianRailwaysAdapter();
+      const legs = await railAdapter.searchLegs(delhiNode, agraNode, new Date());
+
+      legs.forEach((leg) => {
+        expect(leg.dataFreshness.freshnessLevel).not.toBe('realtime');
+        expect(['scheduled', 'historical_estimate']).toContain(leg.dataFreshness.freshnessLevel);
+        expect(leg.fare.isEstimated).toBe(true); // Fares from tariff tables are estimated, not live booked
+      });
+    });
+
+    it('invariant: unconfigured provider fallbacks cannot claim to be real-time or confirmed bookings', async () => {
+      const unconfiguredHere = new HereRoadAdapter({ apiKey: '' });
+      const roadLegs = await unconfiguredHere.searchLegs(delhiNode, agraNode, new Date());
+      expect(roadLegs[0].dataFreshness.freshnessLevel).toBe('historical_estimate');
+      expect(roadLegs[0].availabilityStatus).toBe('unknown');
+      expect(roadLegs[0].fare.isEstimated).toBe(true);
+
+      const unconfiguredAmadeus = new AmadeusFlightAdapter({ clientId: '', clientSecret: '' });
+      const airLegs = await unconfiguredAmadeus.searchLegs(delhiNode, mumbaiNode, new Date());
+      expect(airLegs[0].dataFreshness.freshnessLevel).toBe('historical_estimate');
+      expect(airLegs[0].availabilityStatus).toBe('unknown');
+      expect(airLegs[0].fare.isEstimated).toBe(true);
+      expect(airLegs[0].bookingInfo.bookingReference).toBeNull();
+    });
+
+    it('invariant: every returned TransitLeg contains all required truthfulness fields', async () => {
+      const service = new TransportationProviderService();
+      const result = await service.searchTransportation({
+        origin: delhiNode,
+        destination: agraNode,
+        departureDate: new Date('2026-12-25')
+      });
+
+      expect(result.legs.length).toBeGreaterThan(0);
+      result.legs.forEach((leg) => {
+        // Field 1: dataSource
+        expect(leg.dataFreshness.source).toBeDefined();
+        expect(typeof leg.dataFreshness.source).toBe('string');
+
+        // Field 2: fetchedAt
+        expect(leg.dataFreshness.lastFetchedAt).toBeDefined();
+
+        // Field 3: freshness
+        expect(['realtime', 'scheduled', 'historical_estimate', 'stale_cache']).toContain(
+          leg.dataFreshness.freshnessLevel
+        );
+
+        // Field 4: isEstimated
+        expect(typeof leg.fare.isEstimated).toBe('boolean');
+
+        // Field 5: confidence
+        expect(typeof leg.dataFreshness.confidenceScore).toBe('number');
+        expect(leg.dataFreshness.confidenceScore).toBeGreaterThanOrEqual(0.0);
+        expect(leg.dataFreshness.confidenceScore).toBeLessThanOrEqual(1.0);
+
+        // Field 6: availabilityStatus
+        expect(['scheduled', 'active', 'delayed', 'cancelled', 'completed', 'unknown']).toContain(
+          leg.availabilityStatus
+        );
+      });
+    });
+
+    it('invariant: aged cached data past 75% of TTL is downgraded to "stale_cache"', async () => {
+      const depDate = new Date('2026-12-25T10:00:00Z');
+      const params = {
+        provider: 'test_provider',
+        mode: 'road_driving',
+        origin: delhiNode,
+        destination: agraNode,
+        departureDate: depDate
+      };
+
+      const cacheKey = TransitCacheService.generateCacheKey(params);
+      const pastCreatedAt = new Date(Date.now() - 3000 * 1000); // Created 3000s ago
+      const expiresAt = new Date(Date.now() + 600 * 1000); // Expires in 600s (TTL was 3600s, 3000/3600 = 83% aged)
+
+      await TransitCache.create({
+        cacheKey,
+        provider: 'test_provider',
+        mode: 'road_driving',
+        originQuery: { nodeId: delhiNode.nodeId },
+        destinationQuery: { nodeId: agraNode.nodeId },
+        departureDate: depDate,
+        responsePayload: [
+          {
+            legId: 'leg_stale_test',
+            mode: 'road_driving',
+            origin: delhiNode,
+            destination: agraNode,
+            departureTime: depDate,
+            arrivalTime: new Date(depDate.getTime() + 180 * 60 * 1000),
+            durationMinutes: 180,
+            distanceMeters: 215000,
+            carrier: { name: 'Highway Transit', code: 'ROAD' },
+            fare: { baseAmount: 1500, totalAmount: 1500, currency: 'INR', fareTier: 'standard', isEstimated: true },
+            dataFreshness: { freshnessLevel: 'realtime', source: 'here_routing_v8', confidenceScore: 0.95 },
+            availabilityStatus: 'active'
+          }
+        ],
+        dataFreshness: { freshnessLevel: 'realtime', source: 'here_routing_v8', confidenceScore: 0.95 },
+        ttlSeconds: 3600,
+        createdAt: pastCreatedAt,
+        expiresAt
+      });
+
+      const retrieved = await TransitCacheService.get(cacheKey);
+      expect(retrieved).not.toBeNull();
+      // Crucial test: must NOT be represented as real-time!
+      expect(retrieved.dataFreshness.freshnessLevel).toBe('stale_cache');
+      expect(retrieved.legs[0].dataFreshness.freshnessLevel).toBe('stale_cache');
+    });
+
+    it('invariant: dynamically registers and unregisters custom provider adapters without modifying graph engine', async () => {
+      const service = new TransportationProviderService();
+      const initialCount = service.listAdapters().length;
+
+      // Custom new mock adapter (e.g. Future Ferry or Hyperloop API)
+      const mockCustomAdapter = {
+        providerName: 'coastal_ferry_api',
+        supportedModes: ['ferry'],
+        isConfigured: () => true,
+        healthCheck: async () => ({ status: 'healthy', reachable: true }),
+        searchLegs: async (origin, dest) => [
+          {
+            legId: 'leg_ferry_001',
+            mode: 'ferry',
+            origin,
+            destination: dest,
+            departureTime: new Date(),
+            arrivalTime: new Date(Date.now() + 60 * 60 * 1000),
+            durationMinutes: 60,
+            distanceMeters: 25000,
+            carrier: { name: 'Goa Coastal Ferry', code: 'FERRY', identifier: 'FERRY-1' },
+            fare: { baseAmount: 200, totalAmount: 200, currency: 'INR', fareTier: 'standard', isEstimated: false },
+            dataFreshness: { freshnessLevel: 'realtime', source: 'coastal_ferry_api', confidenceScore: 0.99 },
+            availabilityStatus: 'active'
+          }
+        ]
+      };
+
+      service.registerAdapter(mockCustomAdapter);
+      expect(service.listAdapters().length).toBe(initialCount + 1);
+      expect(service.getAdapter('coastal_ferry_api')).toBeDefined();
+
+      // Query with custom mode
+      const result = await service.searchTransportation({
+        origin: delhiNode,
+        destination: agraNode,
+        modes: ['ferry']
+      });
+
+      expect(result.legs).toHaveLength(1);
+      expect(result.legs[0].mode).toBe('ferry');
+      expect(result.legs[0].carrier.name).toBe('Goa Coastal Ferry');
+
+      // Unregister cleanly
+      service.unregisterAdapter('coastal_ferry_api');
+      expect(service.listAdapters().length).toBe(initialCount);
+      expect(service.getAdapter('coastal_ferry_api')).toBeUndefined();
+    });
+  });
+
+  // ========================================================
+  // 9. MULTIMODAL ROUTE OPTIMIZATION & FASTAPI INTEGRATION
+  // ========================================================
+
+  describe('9. Multimodal Route Optimization (Sub-Milestone 2.4.3)', () => {
+    it('RouteOptimizerService returns ranked routes across all 5 standard categories', async () => {
+      const { RouteOptimizerService } = await import('../src/modules/transportation/index.js');
+      const optimizerService = new RouteOptimizerService();
+
+      const result = await optimizerService.optimizeJourney({
+        origin: delhiNode,
+        destination: agraNode,
+        departureDate: new Date('2026-12-25T08:00:00Z'),
+        modes: ['road_driving', 'rail']
+      });
+
+      expect(result.status).toBe('success');
+      expect(result.searchId).toBeDefined();
+      expect(result.totalCandidates).toBeGreaterThan(0);
+      expect(result.routes).toBeDefined();
+
+      // Verify all 5 required recommendation categories are present
+      expect(result.routes.cheapest).toBeDefined();
+      expect(result.routes.fastest).toBeDefined();
+      expect(result.routes.fewest_transfers).toBeDefined();
+      expect(result.routes.most_convenient).toBeDefined();
+      expect(result.routes.best_overall).toBeDefined();
+
+      expect(result.routes.cheapest.ranking_category).toBe('cheapest');
+      expect(result.routes.fastest.ranking_category).toBe('fastest');
+    });
+
+    it('RouteOptimizerService degrades gracefully with resilient fallback when FastAPI service is unreachable', async () => {
+      const { RouteOptimizerService } = await import('../src/modules/transportation/index.js');
+      // Pass an unreachable intelligence service URL
+      const offlineOptimizerService = new RouteOptimizerService({
+        intelligenceUrl: 'http://127.0.0.1:9999/invalid-api'
+      });
+
+      const result = await offlineOptimizerService.optimizeJourney({
+        origin: delhiNode,
+        destination: agraNode,
+        departureDate: new Date('2026-12-25')
+      });
+
+      // Must NOT throw: returns resilient fallback recommendations
+      expect(result.status).toBe('success');
+      expect(result.routes.best_overall).toBeDefined();
+      expect(result.routes.cheapest).toBeDefined();
+      expect(result.routes.fastest).toBeDefined();
+    });
+
+    it('POST /api/v1/transportation/optimize validates origin and destination (422)', async () => {
+      const res = await request(app)
+        .post('/api/v1/transportation/optimize')
+        .send({
+          origin: null,
+          destination: agraNode
+        });
+
+      expect(res.status).toBe(422);
+      expect(res.body.success).toBe(false);
+      expect(res.body.message).toContain('Invalid origin transport node');
+    });
+
+    it('POST /api/v1/transportation/optimize executes end-to-end route optimization (200)', async () => {
+      const res = await request(app)
+        .post('/api/v1/transportation/optimize')
+        .send({
+          origin: delhiNode,
+          destination: agraNode,
+          departureDate: '2026-12-25T08:00:00Z',
+          modes: ['road_driving', 'rail'],
+          constraints: {
+            maxBudget: 5000,
+            maxTransfers: 2
+          }
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.status).toBe('success');
+      expect(res.body.data.routes).toBeDefined();
+      expect(res.body.data.routes.best_overall).toBeDefined();
+      expect(res.body.data.routes.cheapest).toBeDefined();
+      expect(res.body.data.routes.fastest).toBeDefined();
     });
   });
 });

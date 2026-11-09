@@ -20,6 +20,7 @@ export class TransportationProviderService {
 
   /**
    * Registers a provider adapter.
+   * Enables adding new live APIs dynamically without modifying the graph engine.
    * @param {TransportationProviderAdapter} adapter
    */
   registerAdapter(adapter) {
@@ -27,6 +28,24 @@ export class TransportationProviderService {
       throw new Error('Invalid adapter instance provided.');
     }
     this.adapters.set(adapter.providerName.toLowerCase(), adapter);
+  }
+
+  /**
+   * Unregisters a provider adapter by name.
+   */
+  unregisterAdapter(providerName) {
+    return this.adapters.delete((providerName || '').toLowerCase());
+  }
+
+  /**
+   * Lists all currently registered transportation adapters.
+   */
+  listAdapters() {
+    return Array.from(this.adapters.values()).map((a) => ({
+      providerName: a.providerName,
+      supportedModes: a.supportedModes,
+      isConfigured: typeof a.isConfigured === 'function' ? a.isConfigured() : true
+    }));
   }
 
   /**
@@ -136,14 +155,26 @@ export class TransportationProviderService {
       } catch (err) {
         // Individual provider failure does NOT break the multimodal search
         console.warn(`[TransportationProviderService] Provider '${adapter.providerName}' search failed: ${err.message}`);
+
+        let fallbackLegs = [];
+        if (typeof this.cacheService.getStaleFallback === 'function') {
+          const cacheKey = this.cacheService.generateCacheKey(cacheParams);
+          const fallback = await this.cacheService.getStaleFallback(cacheKey);
+          if (fallback && Array.isArray(fallback.legs) && fallback.legs.length > 0) {
+            fallbackLegs = fallback.legs;
+          }
+        }
+
         warnings.push({
           provider: adapter.providerName,
           error: err.message,
+          degradedFallbackUsed: fallbackLegs.length > 0,
           timestamp: new Date().toISOString()
         });
+
         return {
           provider: adapter.providerName,
-          legs: [],
+          legs: fallbackLegs,
           isCached: false,
           error: err.message
         };

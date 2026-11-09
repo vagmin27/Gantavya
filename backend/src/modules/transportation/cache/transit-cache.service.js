@@ -77,21 +77,85 @@ export class TransitCacheService {
         return null;
       }
 
-      // Mark freshness as cached/stale if close to expiry
+      const now = Date.now();
+      const expiresAtMs = new Date(cached.expiresAt).getTime();
+      const createdAtMs = new Date(cached.createdAt).getTime();
+      const totalTtlMs = Math.max(1, expiresAtMs - createdAtMs);
+      const ageMs = now - createdAtMs;
+
+      // If cached document has aged beyond 75% of its TTL, mark as stale_cache
+      const isStale = ageMs > totalTtlMs * 0.75;
+      const effectiveFreshnessLevel = isStale ? 'stale_cache' : cached.dataFreshness?.freshnessLevel || 'scheduled';
+
       const freshness = {
         ...cached.dataFreshness,
+        freshnessLevel: effectiveFreshnessLevel,
         cachedAt: cached.createdAt,
         expiresAt: cached.expiresAt,
         fromCache: true
       };
 
+      // Ensure each leg reflects cache state and never misrepresents stale data as real-time
+      const legs = (cached.responsePayload || []).map((leg) => ({
+        ...leg,
+        dataFreshness: {
+          ...leg.dataFreshness,
+          freshnessLevel: effectiveFreshnessLevel,
+          cachedAt: cached.createdAt,
+          fromCache: true
+        }
+      }));
+
       return {
-        legs: cached.responsePayload,
+        legs,
         dataFreshness: freshness,
-        confidenceScore: cached.dataFreshness?.confidenceScore ?? 1.0
+        confidenceScore: isStale
+          ? Math.max(0.4, (cached.dataFreshness?.confidenceScore || 1.0) * 0.7)
+          : cached.dataFreshness?.confidenceScore ?? 1.0
       };
     } catch (err) {
       console.warn(`[TransitCacheService.get] Cache read warning: ${err.message}`);
+      return null;
+    }
+  }
+
+  /**
+   * Retrieves expired cache entry specifically as a degraded fallback during live provider outages.
+   * Explicitly tags the output as 'stale_cache' with reduced confidence and estimated fare.
+   */
+  static async getStaleFallback(cacheKey) {
+    try {
+      const cached = await TransitCache.findOne({ cacheKey }).lean();
+      if (!cached) return null;
+
+      const legs = (cached.responsePayload || []).map((leg) => ({
+        ...leg,
+        availabilityStatus: 'unknown',
+        fare: {
+          ...leg.fare,
+          isEstimated: true
+        },
+        dataFreshness: {
+          ...leg.dataFreshness,
+          freshnessLevel: 'stale_cache',
+          confidenceScore: Math.max(0.3, (cached.dataFreshness?.confidenceScore || 0.8) * 0.5),
+          fromCache: true,
+          cachedAt: cached.createdAt,
+          isDegradedFallback: true
+        },
+        notes: `Degraded fallback from expired cache (${cached.provider} live service outage).`
+      }));
+
+      return {
+        legs,
+        dataFreshness: {
+          freshnessLevel: 'stale_cache',
+          source: cached.provider,
+          confidenceScore: 0.4,
+          fromCache: true
+        }
+      };
+    } catch {
       return null;
     }
   }

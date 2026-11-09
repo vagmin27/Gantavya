@@ -6,6 +6,7 @@ const router = Router();
 router.get('/status', TransportationController.getStatus);
 router.get('/providers/status', TransportationController.getProvidersStatus);
 router.post('/search', TransportationController.searchTransportation);
+router.post('/optimize', TransportationController.optimizeTransportation);
 router.post('/validate-leg', TransportationController.validateLegPayload);
 router.post('/cache/purge', TransportationController.purgeCache);
 

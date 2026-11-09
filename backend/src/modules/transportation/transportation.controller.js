@@ -3,6 +3,7 @@ import { TRANSPORT_MODE_ENUM, CURRENCY_ENUM, ROUTE_CATEGORY_ENUM } from './trans
 import { validateTransitLeg, validateTransportNode } from './transportation.validation.js';
 import { defaultProviderService } from './transportation-provider.service.js';
 import { TransitCacheService } from './cache/transit-cache.service.js';
+import { defaultRouteOptimizerService } from './route-optimizer.service.js';
 
 export class TransportationController {
   static getStatus(req, res) {
@@ -55,6 +56,37 @@ export class TransportationController {
       return ApiResponse.success(res, searchResult, 'Transportation options retrieved');
     } catch (err) {
       return ApiResponse.error(res, `Transportation search failed: ${err.message}`, 500);
+    }
+  }
+
+  static async optimizeTransportation(req, res) {
+    try {
+      const { origin, destination, departureDate, modes, constraints, preferences, options, tripId } = req.body;
+
+      const originValidation = validateTransportNode(origin, 'Origin');
+      if (!originValidation.isValid) {
+        return ApiResponse.error(res, 'Invalid origin transport node', 422, originValidation.errors);
+      }
+
+      const destValidation = validateTransportNode(destination, 'Destination');
+      if (!destValidation.isValid) {
+        return ApiResponse.error(res, 'Invalid destination transport node', 422, destValidation.errors);
+      }
+
+      const result = await defaultRouteOptimizerService.optimizeJourney({
+        origin,
+        destination,
+        departureDate: departureDate ? new Date(departureDate) : new Date(),
+        modes: Array.isArray(modes) ? modes : [],
+        constraints: constraints || {},
+        preferences: preferences || {},
+        options: options || {},
+        tripId: tripId || null
+      });
+
+      return ApiResponse.success(res, result, 'Multimodal routes optimized successfully');
+    } catch (err) {
+      return ApiResponse.error(res, `Route optimization failed: ${err.message}`, 500);
     }
   }
 

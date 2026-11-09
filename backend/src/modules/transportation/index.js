@@ -38,5 +38,11 @@ export {
   defaultProviderService
 } from './transportation-provider.service.js';
 
+// Route Optimizer Service (East-West Intelligence Integration)
+export {
+  RouteOptimizerService,
+  defaultRouteOptimizerService
+} from './route-optimizer.service.js';
+
 export { default as transportationRoutes } from './transportation.routes.js';
 export { TransportationController } from './transportation.controller.js';
