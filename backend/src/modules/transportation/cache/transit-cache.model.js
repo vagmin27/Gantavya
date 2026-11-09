@@ -87,3 +87,4 @@ export const transitCacheSchema = new mongoose.Schema(
 transitCacheSchema.index({ provider: 1, mode: 1, departureDate: 1 });
 
 export const TransitCache = mongoose.models.TransitCache || mongoose.model('TransitCache', transitCacheSchema);
+

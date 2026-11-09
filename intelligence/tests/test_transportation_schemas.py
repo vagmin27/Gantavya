@@ -315,8 +315,8 @@ class TestRouteOptionSchema:
 
 class TestProviderAdapterInterface:
     def test_cannot_instantiate_abstract_adapter(self):
-        with pytest.raises(TypeError):
-            BaseTransportationProviderAdapter("Generic", [TransportModeEnum.ROAD_DRIVING])
+        with pytest.raises(TypeError, match="Can't instantiate abstract class"):
+            BaseTransportationProviderAdapter("Generic", [TransportModeEnum.ROAD_DRIVING])  # type: ignore
 
     def test_concrete_subclass_instantiation(self):
         class MockAirAdapter(BaseTransportationProviderAdapter):
