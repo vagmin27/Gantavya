@@ -151,3 +151,4 @@ frontend/src/
 - New tests for theme switching, UI components, and layouts pass.
 - Theme switching works smoothly without page reloads or theme flashing.
 - UI components render identically in light and dark modes with proper contrast.
+

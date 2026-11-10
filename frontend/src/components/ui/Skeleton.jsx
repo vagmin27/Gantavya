@@ -18,3 +18,4 @@ export default function Skeleton({ className = '', variant = 'rect', ...props })
     />
   );
 }
+

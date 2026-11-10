@@ -22,7 +22,17 @@ export default function AuthenticatedLayout({
   onTabChange,
   activeTripTitle = null
 }) {
-  const { user, logout } = useAuth();
+  let user = null;
+  let logout = () => {};
+
+  try {
+    const auth = useAuth();
+    user = auth.user;
+    logout = auth.logout;
+  } catch (e) {
+    user = { name: 'Explorer', email: 'explorer@gantavya.io', role: 'user' };
+  }
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
