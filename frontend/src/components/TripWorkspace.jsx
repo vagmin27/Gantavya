@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { TripService } from '../services/trip.service';
 import { useAuth } from '../context/AuthContext';
+import ItineraryTimeline from './ItineraryTimeline';
 import {
   ArrowLeft,
   Calendar,
@@ -26,6 +27,7 @@ export default function TripWorkspace({ tripId, onBack }) {
   const [days, setDays] = useState([]);
   const [selectedDayId, setSelectedDayId] = useState(null);
   const [activities, setActivities] = useState([]);
+  const [activeViewTab, setActiveViewTab] = useState('timeline');
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState(null);
@@ -381,7 +383,7 @@ export default function TripWorkspace({ tripId, onBack }) {
                     {new Date(selectedDay.calendarDate).toDateString()}
                   </p>
                 </div>
-                {canEdit && (
+                {canEdit && activeViewTab === 'activities' && (
                   <button
                     onClick={() => setShowAddActivity(!showAddActivity)}
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-xs font-semibold transition-colors"
@@ -391,7 +393,44 @@ export default function TripWorkspace({ tripId, onBack }) {
                 )}
               </div>
 
-              {/* Add Activity Inline Form */}
+              {/* View Switcher: Multimodal Timeline vs Activities */}
+              <div className="flex items-center gap-2 border-b border-slate-700/50 pb-2">
+                <button
+                  type="button"
+                  onClick={() => setActiveViewTab('timeline')}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                    activeViewTab === 'timeline'
+                      ? 'bg-emerald-600/30 text-emerald-300 border border-emerald-500/40'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Multimodal Timeline & Transit
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveViewTab('activities')}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                    activeViewTab === 'activities'
+                      ? 'bg-slate-700 text-white'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Activity List ({activities.length})
+                </button>
+              </div>
+
+              {activeViewTab === 'timeline' ? (
+                <ItineraryTimeline
+                  dayId={selectedDayId}
+                  dayNumber={selectedDay.dayNumber}
+                  tripId={tripId}
+                  currency={trip?.budget?.currency || 'INR'}
+                  canEdit={canEdit}
+                  onTimelineUpdated={loadTripData}
+                />
+              ) : (
+                <>
+                  {/* Add Activity Inline Form */}
               {showAddActivity && (
                 <form
                   onSubmit={handleAddActivity}
@@ -567,8 +606,10 @@ export default function TripWorkspace({ tripId, onBack }) {
                   ))}
                 </div>
               )}
-            </div>
+            </>
           )}
+        </div>
+      )}
         </div>
 
         {/* Right Column: Group Collaboration & Participants (1 span) */}

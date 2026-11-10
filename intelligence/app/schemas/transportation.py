@@ -341,3 +341,30 @@ class RouteOptimizationResponseSchema(BaseModel):
     pareto_optimal_count: int = Field(default=0)
     routes: Dict[str, Optional[RouteOptionSchema]] = Field(default_factory=dict)
 
+
+class ScheduleValidationItemSchema(BaseModel):
+    item_id: str
+    item_type: str = "transit"
+    start_time: datetime
+    end_time: datetime
+    mode: Optional[str] = None
+    node_id: Optional[str] = None
+
+
+class ScheduleValidationRequestSchema(BaseModel):
+    schedule_id: str
+    items: List[ScheduleValidationItemSchema]
+    min_transfer_buffers: Dict[str, int] = Field(
+        default_factory=lambda: {"flight": 45, "rail": 20, "road": 10, "default": 15}
+    )
+
+
+class ScheduleValidationResponseSchema(BaseModel):
+    schedule_id: str
+    is_feasible: bool
+    conflicts: List[Dict[str, Any]] = Field(default_factory=list)
+    overnight_count: int = 0
+    total_transit_duration_minutes: int = 0
+    stateless_execution: bool = True
+
+

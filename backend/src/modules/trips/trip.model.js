@@ -249,7 +249,17 @@ const tripSchema = new mongoose.Schema(
         message: '{VALUE} is not a valid trip visibility'
       },
       default: 'private'
-    }
+    },
+    auditTrail: [
+      {
+        timestamp: { type: Date, default: Date.now },
+        actorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+        action: { type: String, required: true },
+        affectedDayNumbers: [{ type: Number }],
+        summary: { type: String, default: '' },
+        metadata: { type: mongoose.Schema.Types.Mixed, default: () => ({}) }
+      }
+    ]
   },
   {
     timestamps: true

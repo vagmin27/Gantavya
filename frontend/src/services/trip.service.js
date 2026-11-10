@@ -117,6 +117,44 @@ export const TripService = {
   async getPlaces(destinationId) {
     const response = await apiClient.get(`/places?destinationId=${destinationId}`);
     return response.data;
+  },
+
+  // Sub-Milestone 2.4.4: Transportation & Timeline Integration
+  async integrateTransportation(dayId, options = {}) {
+    const response = await apiClient.post(`/itineraries/${dayId}/transportation/integrate`, options);
+    return response.data;
+  },
+
+  async getDayTimeline(dayId) {
+    const response = await apiClient.get(`/itineraries/${dayId}/timeline`);
+    return response.data;
+  },
+
+  async validateTimeline(dayId) {
+    const response = await apiClient.post(`/itineraries/${dayId}/validate-timeline`);
+    return response.data;
+  },
+
+  async selectTransitAlternative(dayId, { transitionId, routeCategory }) {
+    const response = await apiClient.post(`/itineraries/${dayId}/select-transit-alternative`, {
+      transitionId,
+      routeCategory
+    });
+    return response.data;
+  },
+
+  async lockTransition(dayId, transitionId, isLocked) {
+    const response = await apiClient.post(`/itineraries/${dayId}/transit/${transitionId}/lock`, {
+      isLocked
+    });
+    return response.data;
+  },
+
+  async recalculateTrip(tripId, fromDayNumber = 1) {
+    const response = await apiClient.post(`/itineraries/trips/${tripId}/recalculate`, {
+      fromDayNumber
+    });
+    return response.data;
   }
 };
 

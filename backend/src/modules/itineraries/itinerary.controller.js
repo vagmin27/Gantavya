@@ -1,6 +1,8 @@
 import { ItineraryService } from './itinerary.service.js';
 import { ApiResponse } from '../../utils/api-response.js';
 import { validateItineraryDayInput } from './itinerary.validation.js';
+import { defaultItineraryTransportationService } from './itinerary-transportation.service.js';
+import { ItinerarySchedulerService } from './itinerary-scheduler.service.js';
 
 export class ItineraryController {
   static getStatus(req, res) {
@@ -98,8 +100,139 @@ export class ItineraryController {
         return ApiResponse.error(res, 'Trip ID is required for reordering', 400);
       }
 
-      const result = await ItineraryService.reorderDays(tripId, dayOrders, userId);
-      return ApiResponse.success(res, result, 'Itinerary days reordered successfully');
+      const updatedDays = await ItineraryService.reorderDays(tripId, dayOrders, userId);
+      return ApiResponse.success(res, updatedDays, 'Itinerary days reordered successfully');
+    } catch (error) {
+      if (error.statusCode) {
+        return ApiResponse.error(res, error.message, error.statusCode);
+      }
+      next(error);
+    }
+  }
+
+  // --- Sub-Milestone 2.4.4 API Integration Endpoints ---
+
+  static async integrateTransportation(req, res, next) {
+    try {
+      const userId = req.user?.id || null;
+      const dayId = req.params.dayId || req.params.id;
+      const updatedDay = await defaultItineraryTransportationService.integrateDayTransportation(
+        dayId,
+        req.body || {},
+        userId
+      );
+      return ApiResponse.success(res, updatedDay, 'Transportation integrated into itinerary successfully');
+    } catch (error) {
+      if (error.statusCode) {
+        return ApiResponse.error(res, error.message, error.statusCode);
+      }
+      next(error);
+    }
+  }
+
+  static async getDayTimeline(req, res, next) {
+    try {
+      const userId = req.user?.id || null;
+      const dayId = req.params.dayId || req.params.id;
+      const timelineData = await ItinerarySchedulerService.buildDayTimeline(dayId, userId);
+      return ApiResponse.success(res, timelineData, 'Itinerary day timeline retrieved successfully');
+    } catch (error) {
+      if (error.statusCode) {
+        return ApiResponse.error(res, error.message, error.statusCode);
+      }
+      next(error);
+    }
+  }
+
+  static async validateTimeline(req, res, next) {
+    try {
+      const userId = req.user?.id || null;
+      const dayId = req.params.dayId || req.params.id;
+      const timelineData = await ItinerarySchedulerService.buildDayTimeline(dayId, userId);
+      return ApiResponse.success(
+        res,
+        {
+          itineraryDayId: dayId,
+          hasConflicts: timelineData.hasConflicts,
+          conflicts: timelineData.conflicts
+        },
+        'Timeline validated successfully'
+      );
+    } catch (error) {
+      if (error.statusCode) {
+        return ApiResponse.error(res, error.message, error.statusCode);
+      }
+      next(error);
+    }
+  }
+
+  static async selectTransitAlternative(req, res, next) {
+    try {
+      const userId = req.user?.id || null;
+      const dayId = req.params.dayId || req.params.id;
+      const { transitionId, routeCategory } = req.body;
+
+      if (!transitionId || !routeCategory) {
+        return ApiResponse.error(res, 'transitionId and routeCategory are required', 422);
+      }
+
+      const updatedDay = await defaultItineraryTransportationService.selectTransitAlternative(
+        dayId,
+        transitionId,
+        routeCategory,
+        userId
+      );
+
+      // Re-run timeline validation after switching alternative
+      await ItinerarySchedulerService.buildDayTimeline(dayId, userId);
+
+      return ApiResponse.success(res, updatedDay, `Transit alternative switched to '${routeCategory}' successfully`);
+    } catch (error) {
+      if (error.statusCode) {
+        return ApiResponse.error(res, error.message, error.statusCode);
+      }
+      next(error);
+    }
+  }
+
+  static async setTransitionLock(req, res, next) {
+    try {
+      const userId = req.user?.id || null;
+      const dayId = req.params.dayId || req.params.id;
+      const transitionId = req.params.transitionId;
+      const { isLocked } = req.body;
+
+      const updatedDay = await defaultItineraryTransportationService.setTransitionLock(
+        dayId,
+        transitionId,
+        isLocked,
+        userId
+      );
+
+      return ApiResponse.success(res, updatedDay, `Transition lock set to ${isLocked}`);
+    } catch (error) {
+      if (error.statusCode) {
+        return ApiResponse.error(res, error.message, error.statusCode);
+      }
+      next(error);
+    }
+  }
+
+  static async recalculateTripSchedule(req, res, next) {
+    try {
+      const userId = req.user?.id || null;
+      const tripId = req.params.tripId;
+      const fromDayNumber = req.body.fromDayNumber ? parseInt(req.body.fromDayNumber, 10) : 1;
+      const options = req.body.options || {};
+
+      const result = await ItinerarySchedulerService.recalculateSchedule(
+        tripId,
+        fromDayNumber,
+        options,
+        userId
+      );
+
+      return ApiResponse.success(res, result, 'Trip schedule recalculated successfully');
     } catch (error) {
       if (error.statusCode) {
         return ApiResponse.error(res, error.message, error.statusCode);

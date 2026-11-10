@@ -81,6 +81,43 @@ const activitySchema = new mongoose.Schema(
         message: '{VALUE} is not a valid activity status'
       },
       default: 'planned'
+    },
+    isLocked: {
+      type: Boolean,
+      default: false
+    },
+    openingHours: {
+      open: {
+        type: String,
+        match: [/^([01]\d|2[0-3]):([0-5]\d)$/, 'Open time must be HH:MM format (24h)'],
+        default: null
+      },
+      close: {
+        type: String,
+        match: [/^([01]\d|2[0-3]):([0-5]\d)$/, 'Close time must be HH:MM format (24h)'],
+        default: null
+      }
+    },
+    locationDetails: {
+      name: { type: String, default: '' },
+      coordinates: {
+        type: [Number],
+        validate: {
+          validator: function (coords) {
+            if (!coords || coords.length === 0) return true;
+            return (
+              Array.isArray(coords) &&
+              coords.length === 2 &&
+              coords[0] >= -180 &&
+              coords[0] <= 180 &&
+              coords[1] >= -90 &&
+              coords[1] <= 90
+            );
+          },
+          message: 'Coordinates must be valid [longitude, latitude]'
+        }
+      },
+      address: { type: String, default: '' }
     }
   },
   {
