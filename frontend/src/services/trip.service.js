@@ -109,8 +109,13 @@ export const TripService = {
   },
 
   // Destinations & Places
-  async getDestinations() {
-    const response = await apiClient.get('/destinations');
+  async getDestinations(params = {}) {
+    const response = await apiClient.get('/destinations', { params });
+    return response.data;
+  },
+
+  async getDestination(id) {
+    const response = await apiClient.get(`/destinations/${id}`);
     return response.data;
   },
 
